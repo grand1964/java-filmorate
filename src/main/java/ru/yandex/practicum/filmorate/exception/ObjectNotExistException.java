@@ -1,10 +1,10 @@
-package ru.yandex.practicum.filmorate.controller.exceptions;
+package ru.yandex.practicum.filmorate.exception;
 
 public class ObjectNotExistException extends RuntimeException {
     private final String key;
-    private final int id;
+    private final long id;
 
-    public ObjectNotExistException(String key, int id) {
+    public ObjectNotExistException(String key, long id) {
         this.key = key;
         this.id = id;
     }

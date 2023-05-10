@@ -8,11 +8,11 @@ import java.time.LocalDate;
 
 @Data
 public class Film {
-    int id;
+    private long id;
     @NotBlank
-    String name;
-    String description;
-    LocalDate releaseDate;
+    private String name;
+    private String description;
+    private LocalDate releaseDate;
     @Min(value = 1)
-    int duration;
+    private int duration;
 }

@@ -2,9 +2,9 @@ package ru.yandex.practicum.filmorate.controller;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.controller.exceptions.ObjectAlreadyExistException;
-import ru.yandex.practicum.filmorate.controller.exceptions.ObjectNotExistException;
-import ru.yandex.practicum.filmorate.controller.exceptions.ValidateException;
+import ru.yandex.practicum.filmorate.exception.ObjectAlreadyExistException;
+import ru.yandex.practicum.filmorate.exception.ObjectNotExistException;
+import ru.yandex.practicum.filmorate.exception.ValidateException;
 import ru.yandex.practicum.filmorate.model.User;
 
 import javax.validation.Valid;
@@ -14,16 +14,12 @@ import java.util.*;
 @RequestMapping("/users")
 @Slf4j
 public class UserController {
-    private final Map<Integer, User> users = new HashMap<>();
-    private int currentId = 0;
+    private final Map<Long, User> users;
+    private long currentId;
 
-    /////////////////////////////// Валидаторы ///////////////////////////////
-
-    private static void validateLogin(String login) {
-        int spacePosition = login.indexOf(' ');
-        if (spacePosition > -1) {
-            throw new ValidateException("Логин не должен содержать пробелы: " + login);
-        }
+    public UserController() {
+        currentId = 0;
+        users = new HashMap<>();
     }
 
     ///////////////////////////// Обработчики REST ///////////////////////////
@@ -37,14 +33,16 @@ public class UserController {
     public User createUser(@Valid @RequestBody User user) {
         validateLogin(user.getLogin());
         if (users.containsKey(user.getId())) {
-            throw new ObjectAlreadyExistException("User",user.getId());
+            log.error("Пользователь с идентификатором " + user.getId() + " уже существует.");
+            throw new ObjectAlreadyExistException("User", user.getId());
         }
         user.setId(++currentId);
         String name = user.getName();
         if ((name == null) || (name.isBlank())) {
             user.setName(user.getLogin());
         }
-        users.put(currentId,user);
+        users.put(currentId, user);
+        log.info("Добавлен новый пользователь: " + user);
         return user;
     }
 
@@ -52,9 +50,21 @@ public class UserController {
     public User updateUser(@RequestBody User user) {
         validateLogin(user.getLogin());
         if (!users.containsKey(user.getId())) {
-            throw new ObjectNotExistException("User",user.getId());
+            log.error("Пользователя с идентификатором " + user.getId() + " не существует.");
+            throw new ObjectNotExistException("User", user.getId());
         }
-        users.put(user.getId(),user);
+        users.put(user.getId(), user);
+        log.info("Фильм с идентификатором " + user.getId() + " заменен на " + user);
         return user;
+    }
+
+    //////////////////////////////// Валидатор ///////////////////////////////
+
+    private static void validateLogin(String login) {
+        int spacePosition = login.indexOf(' ');
+        if (spacePosition > -1) {
+            log.error("Ошибка валидации.");
+            throw new ValidateException("Логин не должен содержать пробелы: " + login);
+        }
     }
 }

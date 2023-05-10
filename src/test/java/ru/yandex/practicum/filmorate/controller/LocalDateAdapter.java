@@ -1,4 +1,4 @@
-package ru.yandex.practicum.filmorate.model;
+package ru.yandex.practicum.filmorate.controller;
 
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;

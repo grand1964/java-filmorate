@@ -6,7 +6,6 @@ import org.junit.jupiter.api.*;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import ru.yandex.practicum.filmorate.FilmorateApplication;
-import ru.yandex.practicum.filmorate.model.LocalDateAdapter;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.io.IOException;
@@ -25,7 +24,7 @@ class UserControllerSpringTest extends ClientRequests {
 
     //сравнивает пользователя с его json-представлением без учета id
     private boolean compareUsers(User user, String response) {
-        User responseUser = gson.fromJson(response,User.class);
+        User responseUser = gson.fromJson(response, User.class);
         responseUser.setId(user.getId());
         return user.equals(responseUser);
     }
@@ -54,7 +53,7 @@ class UserControllerSpringTest extends ClientRequests {
         user.setEmail("Vasya@mmm");
         user.setLogin("xxx");
         user.setName("Vasya");
-        user.setBirthday(LocalDate.of(1940,12,9));
+        user.setBirthday(LocalDate.of(1940, 12, 9));
     }
 
     @AfterEach
@@ -67,28 +66,28 @@ class UserControllerSpringTest extends ClientRequests {
         //отсутствующий email
         user.setEmail(null);
         String json = gson.toJson(user);
-        HttpResponse<String> response = responseToPOST(json,"/users");
-        assertEquals(response.statusCode(),400);
+        HttpResponse<String> response = responseToPOST(json, "/users");
+        assertEquals(response.statusCode(), 400);
         //пустой email
         user.setEmail(" ");
         json = gson.toJson(user);
-        response = responseToPOST(json,"/users");
-        assertEquals(response.statusCode(),400);
+        response = responseToPOST(json, "/users");
+        assertEquals(response.statusCode(), 400);
         //email без @
         user.setEmail("abc");
         json = gson.toJson(user);
-        response = responseToPOST(json,"/users");
-        assertEquals(response.statusCode(),400);
+        response = responseToPOST(json, "/users");
+        assertEquals(response.statusCode(), 400);
         //email без логина
         user.setEmail("@nnn");
         json = gson.toJson(user);
-        response = responseToPOST(json,"/users");
-        assertEquals(response.statusCode(),400);
+        response = responseToPOST(json, "/users");
+        assertEquals(response.statusCode(), 400);
         //email с пробелами
         user.setEmail("aaa@n nn");
         json = gson.toJson(user);
-        response = responseToPOST(json,"/users");
-        assertEquals(response.statusCode(),400);
+        response = responseToPOST(json, "/users");
+        assertEquals(response.statusCode(), 400);
     }
 
     @Test
@@ -96,37 +95,46 @@ class UserControllerSpringTest extends ClientRequests {
         //отсутствующий логин
         user.setLogin(null);
         String json = gson.toJson(user);
-        HttpResponse<String> response = responseToPOST(json,"/users");
-        assertEquals(response.statusCode(),400);
+        HttpResponse<String> response = responseToPOST(json, "/users");
+        assertEquals(response.statusCode(), 400);
         //пустой логин
         user.setLogin(" ");
         json = gson.toJson(user);
-        response = responseToPOST(json,"/users");
-        assertEquals(response.statusCode(),400);
+        response = responseToPOST(json, "/users");
+        assertEquals(response.statusCode(), 400);
         //логин с пробелами
         user.setLogin("a b");
         json = gson.toJson(user);
-        response = responseToPOST(json,"/users");
-        assertEquals(response.statusCode(),500);
+        response = responseToPOST(json, "/users");
+        assertEquals(response.statusCode(), 500);
     }
 
     @Test
-    void createFilmTestWithBadBirthday() throws IOException, InterruptedException {
+    void createFilmTestWithFutureBirthday() throws IOException, InterruptedException {
         //дата рождения - в будущем
-        user.setBirthday(LocalDate.of(2050,12,9));
+        user.setBirthday(LocalDate.of(2050, 12, 9));
         String json = gson.toJson(user);
-        HttpResponse<String> response = responseToPOST(json,"/users");
-        assertEquals(response.statusCode(),400);
-        //дата рождения - текущая (это тоже не годится)
+        HttpResponse<String> response = responseToPOST(json, "/users");
+        assertEquals(response.statusCode(), 400); //не годится
+    }
+
+    @Test
+    void createFilmTestWithNowOrFutureBirthday() throws IOException, InterruptedException {
+        //дата рождения - текущая (это годится)
         user.setBirthday(LocalDate.now());
-        json = gson.toJson(user);
-        response = responseToPOST(json,"/users");
-        assertEquals(response.statusCode(),400);
-        //и на день раньше
+        String json = gson.toJson(user);
+        HttpResponse<String> response = responseToPOST(json, "/users");
+        assertEquals(response.statusCode(), 200);
+        assertTrue(compareUsers(user, response.body())); //сверяем отправленное с полученным
+    }
+
+    @Test
+    void createFilmTestWithPastBirthday() throws IOException, InterruptedException {
+        //дата рождения - на день раньше текущей
         user.setBirthday(user.getBirthday().minusDays(1));
-        json = gson.toJson(user);
-        response = responseToPOST(json,"/users");
-        assertEquals(response.statusCode(),200); //это приемлемо
-        assertTrue(compareUsers(user,response.body())); //сверяем отправленное с полученным
+        String json = gson.toJson(user);
+        HttpResponse<String> response = responseToPOST(json, "/users");
+        assertEquals(response.statusCode(), 200); //это приемлемо
+        assertTrue(compareUsers(user, response.body())); //сверяем отправленное с полученным
     }
 }

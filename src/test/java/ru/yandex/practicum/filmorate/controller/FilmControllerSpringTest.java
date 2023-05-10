@@ -7,7 +7,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import ru.yandex.practicum.filmorate.FilmorateApplication;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.model.LocalDateAdapter;
 
 import java.io.IOException;
 import java.net.http.HttpClient;
@@ -25,7 +24,7 @@ class FilmControllerSpringTest extends ClientRequests {
 
     //сравнивает фильм с его json-представлением без учета id
     private boolean compareFilms(Film film, String response) {
-        Film responseFilm = gson.fromJson(response,Film.class);
+        Film responseFilm = gson.fromJson(response, Film.class);
         responseFilm.setId(film.getId());
         return film.equals(responseFilm);
     }
@@ -54,7 +53,7 @@ class FilmControllerSpringTest extends ClientRequests {
         film.setName("xxx");
         film.setDescription("");
         film.setDuration(17);
-        film.setReleaseDate(LocalDate.of(1895,12,28));
+        film.setReleaseDate(LocalDate.of(1895, 12, 28));
     }
 
     @AfterEach
@@ -64,11 +63,11 @@ class FilmControllerSpringTest extends ClientRequests {
 
     @Test
     void createNormalFilmTest() throws IOException, InterruptedException {
-        film.setReleaseDate(LocalDate.of(1895,12,28));
+        film.setReleaseDate(LocalDate.of(1895, 12, 28));
         String json = gson.toJson(film);
-        HttpResponse<String> response = responseToPOST(json,"/films");
-        assertEquals(response.statusCode(),200);
-        assertTrue(compareFilms(film,response.body()));
+        HttpResponse<String> response = responseToPOST(json, "/films");
+        assertEquals(response.statusCode(), 200);
+        assertTrue(compareFilms(film, response.body()));
     }
 
     @Test
@@ -81,28 +80,28 @@ class FilmControllerSpringTest extends ClientRequests {
         String description = new String(chars);
         film.setDescription(description);
         String json = gson.toJson(film);
-        response = responseToPOST(json,"/films");
-        assertEquals(response.statusCode(),200);
-        assertTrue(compareFilms(film,response.body())); //нормальное описание
+        response = responseToPOST(json, "/films");
+        assertEquals(response.statusCode(), 200);
+        assertTrue(compareFilms(film, response.body())); //нормальное описание
         film.setDescription(description + 'b');
         json = gson.toJson(film);
-        response = responseToPOST(json,"/films");
-        assertEquals(response.statusCode(),500);
+        response = responseToPOST(json, "/films");
+        assertEquals(response.statusCode(), 500);
     }
 
     @Test
     void createFilmTestWithTooOldRelease() throws IOException, InterruptedException {
-        film.setReleaseDate(LocalDate.of(1895,12,27));
+        film.setReleaseDate(LocalDate.of(1895, 12, 27));
         String json = gson.toJson(film);
-        HttpResponse<String> response = responseToPOST(json,"/films");
-        assertEquals(response.statusCode(),500);
+        HttpResponse<String> response = responseToPOST(json, "/films");
+        assertEquals(response.statusCode(), 500);
     }
 
     @Test
     void createFilmTestWithNonPositiveDuration() throws IOException, InterruptedException {
         film.setDuration(0);
         String json = gson.toJson(film);
-        HttpResponse<String> response = responseToPOST(json,"/films");
-        assertEquals(response.statusCode(),400);
+        HttpResponse<String> response = responseToPOST(json, "/films");
+        assertEquals(response.statusCode(), 400);
     }
 }

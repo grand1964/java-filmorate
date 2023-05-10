@@ -1,10 +1,10 @@
-package ru.yandex.practicum.filmorate.controller.exceptions;
+package ru.yandex.practicum.filmorate.exception;
 
 public class ObjectAlreadyExistException extends RuntimeException {
     private final String key;
-    private final int id;
+    private final long id;
 
-    public ObjectAlreadyExistException(String key, int id) {
+    public ObjectAlreadyExistException(String key, long id) {
         this.key = key;
         this.id = id;
     }
