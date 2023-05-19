@@ -7,16 +7,19 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import ru.yandex.practicum.filmorate.FilmorateApplication;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.util.ClientRequests;
+import ru.yandex.practicum.filmorate.util.LocalDateAdapter;
 
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
+import java.util.HashSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class UserControllerSpringTest extends ClientRequests {
+class UserControllerTest extends ClientRequests {
     private static ConfigurableApplicationContext context;
     private static Gson gson;
     private static int id;
@@ -54,6 +57,7 @@ class UserControllerSpringTest extends ClientRequests {
         user.setLogin("xxx");
         user.setName("Vasya");
         user.setBirthday(LocalDate.of(1940, 12, 9));
+        user.setFriends(new HashSet<>());
     }
 
     @AfterEach
@@ -106,11 +110,11 @@ class UserControllerSpringTest extends ClientRequests {
         user.setLogin("a b");
         json = gson.toJson(user);
         response = responseToPOST(json, "/users");
-        assertEquals(response.statusCode(), 500);
+        assertEquals(response.statusCode(), 400);
     }
 
     @Test
-    void createFilmTestWithFutureBirthday() throws IOException, InterruptedException {
+    void createUserTestWithFutureBirthday() throws IOException, InterruptedException {
         //дата рождения - в будущем
         user.setBirthday(LocalDate.of(2050, 12, 9));
         String json = gson.toJson(user);

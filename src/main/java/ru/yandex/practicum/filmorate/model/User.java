@@ -2,13 +2,14 @@ package ru.yandex.practicum.filmorate.model;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
+import ru.yandex.practicum.filmorate.storage.Storable;
 import javax.validation.constraints.*;
 import java.time.LocalDate;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
-public class User {
+public class User implements Storable {
     private long id;
     @NotBlank
     private String login;
@@ -19,4 +20,5 @@ public class User {
     @NotNull
     @PastOrPresent
     private LocalDate birthday;
+    private Set<Long> friends;
 }
