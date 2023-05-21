@@ -22,15 +22,10 @@ public class ErrorHandler {
         return new ErrorResponse(e.getMessage(), "409");
     }
 
-    @ExceptionHandler
+    @ExceptionHandler({ValidateException.class,
+            MethodArgumentNotValidException.class, IncorrectParameterFormatException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleValidate(ValidateException e) {
-        return new ErrorResponse(e.getMessage(), "400");
-    }
-
-    @ExceptionHandler
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleArgumentNotValidValidate(MethodArgumentNotValidException e) {
+    public ErrorResponse handleValidate(RuntimeException e) {
         return new ErrorResponse(e.getMessage(), "400");
     }
 
@@ -38,12 +33,6 @@ public class ErrorHandler {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ErrorResponse handleIncorrectParameter(IncorrectParameterException e) {
         return new ErrorResponse("Ошибка с полем " + e.getParameter(), "404");
-    }
-
-    @ExceptionHandler
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleIncorrectParameterFormat(IncorrectParameterFormatException e) {
-        return new ErrorResponse(e.getMessage(), "400");
     }
 
     @ExceptionHandler

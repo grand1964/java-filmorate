@@ -5,6 +5,7 @@ import ru.yandex.practicum.filmorate.storage.Storable;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.Set;
 
 @Data
@@ -17,4 +18,11 @@ public class Film implements Storable {
     @Min(value = 1)
     private int duration;
     private Set<Long> likes;
+
+    public Set<Long> getLikes() {
+        if (likes == null) {
+            likes = new HashSet<>();
+        }
+        return likes;
+    }
 }

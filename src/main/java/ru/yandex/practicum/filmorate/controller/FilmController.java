@@ -2,14 +2,14 @@ package ru.yandex.practicum.filmorate.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.exception.IncorrectParameterFormatException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
-
 import javax.validation.Valid;
 import java.util.List;
-import java.util.Map;
 
 @RestController
+@RequestMapping("/films")
 public class FilmController {
     private final FilmService service;
 
@@ -21,53 +21,63 @@ public class FilmController {
     ///////////////////////////// Получение данных ///////////////////////////
 
     //получение всех фильмов
-    @GetMapping(value = "/films")
+    @GetMapping
     public List<Film> getAllFilms() {
         return service.getAll();
     }
 
     //получение фильма по идентификатору
-    @GetMapping(value = "/films/{id}")
+    @GetMapping(value = "/{id}")
     public Film getFilm(@PathVariable("id") String filmId) {
-        return service.get(filmId);
+        return service.get(parseNumberParam(filmId));
     }
 
     //получение топовых фильмов
-    @GetMapping(value = "/films/popular")
+    @GetMapping(value = "/popular")
     public List<Film> getTopFilms(
-            @RequestParam(required = false, defaultValue = "10") String count) {
-        return service.getTopFilms(count);
+            @RequestParam(defaultValue = "10") String count) {
+        return service.getTopFilms(parseNumberParam(count));
     }
 
     ////////////////////////////// Передача данных ///////////////////////////
 
-    @PostMapping(value = "/films")
+    @PostMapping
     public Film createFilm(@Valid @RequestBody Film film) {
         return service.create(film);
     }
 
-    @PutMapping(value = "/films")
+    @PutMapping
     public Film updateFilm(@Valid @RequestBody Film film) {
         return service.update(film);
     }
 
     //добавление лайка фильму
-    @PutMapping(value = "/films/{id}/like/{userId}")
-    public void addLike(@PathVariable Map<String, String> params) {
-        service.addLike(params.get("id"), params.get("userId"));
+    @PutMapping(value = "/{id}/like/{userId}")
+    public void addLike(@PathVariable String id, @PathVariable String userId) {
+        service.addLike(parseNumberParam(id), parseNumberParam(userId));
     }
 
     ////////////////////////////// Удаление данных ///////////////////////////
 
     //удаление лайка с фильма
-    @DeleteMapping(value = "/films/{id}/like/{userId}")
-    public Film deleteLike(@PathVariable Map<String, String> params) {
-        return service.deleteLike(params.get("id"), params.get("userId"));
+    @DeleteMapping(value = "/{id}/like/{userId}")
+    public Film deleteLike(@PathVariable String id, @PathVariable String userId) {
+        return service.deleteLike(parseNumberParam(id), parseNumberParam(userId));
     }
 
     //удаление всех фильмов (нужно для тестов)
-    @DeleteMapping(value = "/films")
+    @DeleteMapping
     public void deleteAll() {
         service.deleteAll();
+    }
+
+    ////////////////////////// Конвертация параметров ////////////////////////
+
+    protected long parseNumberParam(String param) {
+        try {
+            return Long.parseLong(param);
+        } catch (NumberFormatException e) {
+            throw new IncorrectParameterFormatException("Задан нечисловой параметр: ", param);
+        }
     }
 }

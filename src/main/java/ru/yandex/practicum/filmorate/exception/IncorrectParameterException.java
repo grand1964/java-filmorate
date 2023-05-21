@@ -2,14 +2,14 @@ package ru.yandex.practicum.filmorate.exception;
 
 public class IncorrectParameterException extends RuntimeException {
     private final String message;
-    private final String parameter;
+    private final Long parameter;
 
-    public IncorrectParameterException(String message, String parameter) {
+    public IncorrectParameterException(String message, Long parameter) {
         this.message = message;
         this.parameter = parameter;
     }
 
-    public String getParameter() {
+    public Long getParameter() {
         return parameter;
     }
 

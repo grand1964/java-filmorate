@@ -24,17 +24,9 @@ public class FilmService extends AbstractService<Film> {
     }
 
     //добавление лайка
-    public void addLike(String filmParam, String userParam) {
-        long userId = validateUserId(userParam);
-        long filmId = validateId(filmParam);
-        if (userId == -1) {
-            log.error("Пользователь " + userParam + " не найден.");
-            throw new IncorrectParameterException("Пользователь %s не найден: ", userParam);
-        }
-        if (filmId == -1) {
-            log.error("Фильм " + filmParam + " не найден.");
-            throw new IncorrectParameterException("Фильм %s не найден: ", filmParam);
-        }
+    public void addLike(long filmId, long userId) {
+        validateFimId(filmId);
+        validateUserId(userId);
         if (storage.get(filmId).orElseThrow().getLikes().add(userId)) {
             log.info("Пользователь " + userId + " добавил лайк фильму " + filmId);
         } else {
@@ -43,21 +35,13 @@ public class FilmService extends AbstractService<Film> {
     }
 
     //удаление лайка
-    public Film deleteLike(String filmParam, String userParam) {
-        long userId = validateUserId(userParam);
-        long filmId = validateId(filmParam);
-        if (userId == -1) {
-            log.error("Пользователь " + userParam + " не найден.");
-            throw new IncorrectParameterException("Пользователь %s не найден: ", userParam);
-        }
-        if (filmId == -1) {
-            log.error("Фильм " + filmParam + " не найден.");
-            throw new IncorrectParameterException("Фильм %s не найден: ", filmParam);
-        }
+    public Film deleteLike(long filmId, long userId) {
+        validateFimId(filmId);
+        validateUserId(userId);
         Film film = storage.get(filmId).orElseThrow();
         if (film.getLikes().contains(userId)) {
-            log.info("Пользователь " + userId + " удалил лайк с фильма " + filmId);
             film.getLikes().remove(userId);
+            log.info("Пользователь " + userId + " удалил лайк с фильма " + filmId);
         } else {
             log.warn("Пользователь " + userId + " не ставил лайк фильму " + filmId);
         }
@@ -65,26 +49,18 @@ public class FilmService extends AbstractService<Film> {
     }
 
     //Получение 10 топовых фильмов
-    public List<Film> getTopFilms(String count) {
-        int topCount;
-        try {
-            topCount = Integer.parseInt(count);
-            if (topCount < 1) {
-                String message = "Неверное количество фильмов: ";
-                log.error(message + count);
-                throw new IncorrectParameterFormatException(message, count);
-            }
-        } catch (NumberFormatException e) {
-            String message = "Задан нечисловой параметр: ";
+    public List<Film> getTopFilms(Long count) {
+        if (count < 1) {
+            String message = "Неверное количество фильмов: ";
             log.error(message + count);
-            throw new IncorrectParameterFormatException(message, count);
+            throw new IncorrectParameterFormatException(message, count.toString());
         }
         List<Film> list = storage.getAll();
         Comparator<Film> comparator = Comparator.comparingLong(a -> a.getLikes().size());
         return list
                 .stream()
                 .sorted(comparator.reversed())
-                .limit(topCount)
+                .limit(count)
                 .collect(Collectors.toList());
     }
 
@@ -112,34 +88,21 @@ public class FilmService extends AbstractService<Film> {
         }
     }
 
-    @Override
-    protected long validateId(String paramId) {
-        long id = super.validateId(paramId);
-        if (id == -1) {
-            return id;
-        }
+    private void validateFimId(long id) {
         if (storage.get(id).isEmpty()) {
-            log.error(String.format("Не найден фильм с идентификатором " + paramId));
-            return -1;
+            String message = "Фильм с идентификатором %d не найден.";
+            log.error(String.format(message, id));
+            throw new IncorrectParameterException(message, id);
         }
-        return id;
     }
 
     ////////////////////////// Вспомогательная функция ///////////////////////
 
-    private long validateUserId(String userId) {
-        long id;
-        try {
-            id = Long.parseLong(userId);
-        } catch (NumberFormatException e) {
-            log.error("Задан нечисловой параметр: " + userId);
-            throw new IncorrectParameterFormatException("Задан нечисловой параметр: ", userId);
-        }
-        if (id <= 0) {
+    private void validateUserId(long userId) {
+        if (userId <= 0) {
             String message = "Некорректный идентификатор пользователя: ";
             log.error(message + userId);
-            throw new IncorrectParameterException("Некорректный идентификатор пользователя: ", userId);
+            throw new IncorrectParameterException(message, userId);
         }
-        return id;
     }
 }

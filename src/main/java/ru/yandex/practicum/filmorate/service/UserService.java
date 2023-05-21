@@ -20,60 +20,46 @@ public class UserService extends AbstractService<User> {
     }
 
     //добавление друга
-    public User addFriend(String userParam, String friendParam) {
-        long userId = validateId(userParam);
-        long friendId = validateId(friendParam);
-        if (userId == -1) {
-            log.error("Пользователь " + userParam + " не найден.");
-            throw new IncorrectParameterException("Пользователь %s не найден: ", userParam);
-        }
-        if (friendId == -1) {
-            log.error("Друг " + userParam + " не найден.");
-            throw new IncorrectParameterException("Друг %s не найден: ", friendParam);
-        }
+    public User addFriend(long userId, long friendId) {
+        validateUserId(userId);
+        validateUserId(friendId);
         User friend = storage.get(friendId).orElseThrow();
         if (!storage.get(userId).orElseThrow().getFriends().add(friendId)) {
-            log.warn("У пользователя " + userParam + " друг " + friendParam + " уже есть.");
+            log.warn("У пользователя " + userId + " друг " + friendId + " уже есть.");
         } else {
-            log.info("В друзья пользователя " + userParam + " добавлен " + friendParam);
+            log.info("В друзья пользователя " + userId + " добавлен " + friendId);
         }
         if (!friend.getFriends().add(userId)) {
-            log.warn("У пользователя " + friendParam + " друг " + userParam + " уже есть.");
+            log.warn("У пользователя " + friendId + " друг " + userId + " уже есть.");
         } else {
-            log.info("В друзья пользователя " + friendParam + " добавлен " + userParam);
+            log.info("В друзья пользователя " + friendId + " добавлен " + userId);
         }
         return friend;
     }
 
     //получение списка друзей пользователя
-    public List<User> getFriends(String userParam) {
-        long userId = validateId(userParam);
-        if (userId == -1) {
-            log.warn("Пользователь " + userParam + " не найден.");
-            return new ArrayList<>();
-        }
-        log.info("Получен список друзей пользователя " + userParam);
+    public List<User> getFriends(long userId) {
+        validateUserId(userId);
+        log.info("Получен список друзей пользователя " + userId);
         return idsToUsers(storage.get(userId).orElseThrow().getFriends());
     }
 
     //получение списка общих друзей
-    public List<User> getCommonFriends(String param1, String param2) {
-        long id1 = validateId(param1);
-        long id2 = validateId(param2);
-        if ((id1 == -1) || (id2 == -1)) {
-            log.info("Список общих друзей пользователей " + param1 + " и " + param2 + " пуст.");
+    public List<User> getCommonFriends(long id1, long id2) {
+        if (storage.get(id1).isEmpty() || storage.get(id2).isEmpty()) {
+            log.info("Список общих друзей пользователей " + id1 + " и " + id2 + " пуст.");
             return new ArrayList<>(); //пустой список
         }
         User user1 = storage.get(id1).orElseThrow();
         User user2 = storage.get(id2).orElseThrow();
-        log.info("Получен список общих друзей пользователей " + param1 + " и " + param2);
+        log.info("Получен список общих друзей пользователей " + id1 + " и " + id2);
         return idsToUsers(intersection(user1.getFriends(), user2.getFriends()));
     }
 
     //удаление друга
-    public User deleteFriend(String userParam, String friendParam) {
-        long userId = validateId(userParam);
-        long friendId = validateId(friendParam);
+    public User deleteFriend(long userId, long friendId) {
+        validateUserId(userId);
+        validateUserId(friendId);
         User user = storage.get(userId).orElseThrow();
         User friend = storage.get(friendId).orElseThrow();
         if (user.getFriends().contains(friendId)) {
@@ -110,17 +96,12 @@ public class UserService extends AbstractService<User> {
         }
     }
 
-    @Override
-    protected long validateId(String paramId) {
-        long id = super.validateId(paramId);
-        if (id == -1) {
-            return id;
-        }
+    protected void validateUserId(long id) {
         if (storage.get(id).isEmpty()) {
-            log.error(String.format("Не найден пользователь с идентификатором " + paramId));
-            return -1;
+            String message = "Пользователь с идентификатором %d не найден.";
+            log.error(String.format(message, id));
+            throw new IncorrectParameterException(message, id);
         }
-        return id;
     }
 
     ///////////////////////// Вспомогательные функции ////////////////////////

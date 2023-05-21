@@ -3,18 +3,16 @@ package ru.yandex.practicum.filmorate.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.yandex.practicum.filmorate.exception.IncorrectParameterException;
-import ru.yandex.practicum.filmorate.exception.IncorrectParameterFormatException;
 import ru.yandex.practicum.filmorate.exception.ObjectAlreadyExistException;
 import ru.yandex.practicum.filmorate.exception.ObjectNotExistException;
 import ru.yandex.practicum.filmorate.storage.Storable;
 import ru.yandex.practicum.filmorate.storage.Storage;
 
 import java.util.List;
-import java.util.Optional;
 
 public abstract class AbstractService<T extends Storable> {
     protected Storage<T> storage;
-    protected static Logger log;
+    protected Logger log;
 
     public AbstractService(Storage<T> storage) {
         this.storage = storage;
@@ -24,12 +22,11 @@ public abstract class AbstractService<T extends Storable> {
     ///////////////////////////// Чтение объектов ////////////////////////////
 
     //получение объекта по идентификатору
-    public T get(String paramId) {
-        long id = validateId(paramId);
-        if (id == -1) {
-            throw new IncorrectParameterException("Задан ошибочный идентификатор: ", paramId);
-        }
-        return storage.get(id).orElseThrow();
+    public T get(long id) {
+        return storage.get(id).orElseThrow(() -> {
+            log.error("Задан ошибочный идентификатор: " + id);
+            return new IncorrectParameterException("Задан ошибочный идентификатор: ", id);
+        });
     }
 
     //получение списка всех объектов
@@ -42,37 +39,30 @@ public abstract class AbstractService<T extends Storable> {
     //добавление объекта
     public T create(T object) {
         validate(object); //проверяем корректность входного объекта
-        Optional<T> outObject = storage.create(object); //пытаемся записать его в хранилище
-        if (outObject.isEmpty()) { //такой объект уже есть
+        return storage.create(object).orElseThrow(() -> {
             log.error("Объект с идентификатором " + object.getId() + " уже существует.");
-            throw new ObjectAlreadyExistException(object.getId());
-        }
-        return outObject.orElseThrow();
+            return new ObjectAlreadyExistException(object.getId());
+        });
     }
 
     //обновление объекта
     public T update(T object) {
         validate(object); //проверяем корректность входного объекта
-        Optional<T> outObject = storage.update(object); //пытаемся записать его в хранилище
-        if (outObject.isEmpty()) { //объекта с таким идентификатором нет
+        return storage.update(object).orElseThrow(() -> {
             log.error("Объект с идентификатором " + object.getId() + " не существует.");
-            throw new ObjectNotExistException(object.getId());
-        }
-        return outObject.orElseThrow();
+            return new ObjectNotExistException(object.getId());
+        });
     }
 
     //////////////////////////// Удаление объектов ///////////////////////////
 
     //удаление по идентификатору
-    public T delete(String param) {
-        long id = validateId(param);
-        Optional<T> outObject = storage.delete(id);
-        if (outObject.isEmpty()) { //объекта с таким идентификатором нет
+    public T delete(long id) {
+        return storage.delete(id).orElseThrow(() -> {
             String message = "Объект с идентификатором %s не существует.";
-            log.error(String.format(message, param));
-            throw new IncorrectParameterException(message, param);
-        }
-        return outObject.orElseThrow();
+            log.error(String.format(message, id));
+            return new IncorrectParameterException(message, id);
+        });
     }
 
     //удаление всех объектов
@@ -83,13 +73,4 @@ public abstract class AbstractService<T extends Storable> {
     //////////////////////////// Валидация объектов //////////////////////////
 
     protected abstract void validate(T object);
-
-    protected long validateId(String paramId) {
-        try {
-            return Long.parseLong(paramId);
-        } catch (NumberFormatException e) {
-            log.error("Задан нечисловой параметр: " + paramId);
-            throw new IncorrectParameterFormatException("Задан нечисловой параметр: ", paramId);
-        }
-    }
 }
