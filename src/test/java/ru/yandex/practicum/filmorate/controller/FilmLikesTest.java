@@ -122,8 +122,9 @@ class FilmLikesTest extends ClientRequests {
                 setLike(id, i);
             }
         }
+        String request;
         //проверяем нечисловой параметр
-        String request = "/films/popular?count=1a2";
+        request = "/films/popular?count=1a2";
         assertEquals(responseToGET(request).statusCode(), 400);
         //проверяем некорректные числовые параметры
         request = "/films/popular?count=0";

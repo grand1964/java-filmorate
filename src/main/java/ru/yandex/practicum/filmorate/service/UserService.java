@@ -21,27 +21,26 @@ public class UserService extends AbstractService<User> {
 
     //добавление друга
     public User addFriend(long userId, long friendId) {
-        validateUserId(userId);
-        validateUserId(friendId);
-        User friend = storage.get(friendId).orElseThrow();
-        if (!storage.get(userId).orElseThrow().getFriends().add(friendId)) {
-            log.warn("У пользователя " + userId + " друг " + friendId + " уже есть.");
-        } else {
+        User user = storage.get(userId).orElseThrow(() -> badUser(userId));
+        User friend = storage.get(friendId).orElseThrow(() -> badUser(friendId));
+        if (user.addFriend(friendId)) {
             log.info("В друзья пользователя " + userId + " добавлен " + friendId);
-        }
-        if (!friend.getFriends().add(userId)) {
-            log.warn("У пользователя " + friendId + " друг " + userId + " уже есть.");
         } else {
+            log.warn("У пользователя " + userId + " друг " + friendId + " уже есть.");
+        }
+        if (friend.addFriend(userId)) {
             log.info("В друзья пользователя " + friendId + " добавлен " + userId);
+        } else {
+            log.warn("У пользователя " + friendId + " друг " + userId + " уже есть.");
         }
         return friend;
     }
 
     //получение списка друзей пользователя
     public List<User> getFriends(long userId) {
-        validateUserId(userId);
+        User user = storage.get(userId).orElseThrow(() -> badUser(userId));
         log.info("Получен список друзей пользователя " + userId);
-        return idsToUsers(storage.get(userId).orElseThrow().getFriends());
+        return idsToUsers(user.getFriends());
     }
 
     //получение списка общих друзей
@@ -50,27 +49,23 @@ public class UserService extends AbstractService<User> {
             log.info("Список общих друзей пользователей " + id1 + " и " + id2 + " пуст.");
             return new ArrayList<>(); //пустой список
         }
-        User user1 = storage.get(id1).orElseThrow();
-        User user2 = storage.get(id2).orElseThrow();
+        User user1 = storage.get(id1).orElseThrow(() -> badUser(id1));
+        User user2 = storage.get(id2).orElseThrow(() -> badUser(id2));
         log.info("Получен список общих друзей пользователей " + id1 + " и " + id2);
         return idsToUsers(intersection(user1.getFriends(), user2.getFriends()));
     }
 
     //удаление друга
     public User deleteFriend(long userId, long friendId) {
-        validateUserId(userId);
-        validateUserId(friendId);
-        User user = storage.get(userId).orElseThrow();
-        User friend = storage.get(friendId).orElseThrow();
-        if (user.getFriends().contains(friendId)) {
+        User user = storage.get(userId).orElseThrow(() -> badUser(userId));
+        User friend = storage.get(friendId).orElseThrow(() -> badUser(friendId));
+        if (user.removeFriend(friendId)) {
             log.info("Из друзей пользователя " + userId + " удален " + friendId);
-            user.getFriends().remove(friendId);
         } else {
             log.warn("У пользователя " + userId + " не было друга " + friendId);
         }
-        if (friend.getFriends().contains(userId)) {
+        if (friend.removeFriend(userId)) {
             log.info("Из друзей пользователя " + friendId + " удален " + userId);
-            friend.getFriends().remove(userId);
         } else {
             log.warn("У пользователя " + friendId + " не было друга " + userId);
         }
@@ -96,25 +91,23 @@ public class UserService extends AbstractService<User> {
         }
     }
 
-    protected void validateUserId(long id) {
-        if (storage.get(id).isEmpty()) {
-            String message = "Пользователь с идентификатором %d не найден.";
-            log.error(String.format(message, id));
-            throw new IncorrectParameterException(message, id);
-        }
+    private IncorrectParameterException badUser(long id) {
+        String message = "Пользователь с идентификатором %d не найден.";
+        log.error(String.format(message, id));
+        return new IncorrectParameterException(message, id);
     }
 
     ///////////////////////// Вспомогательные функции ////////////////////////
 
     //возвращает пересечение двух множеств
-    public static <T> Set<T> intersection(Set<T> set1, Set<T> set2) {
+    private static <T> Set<T> intersection(Set<T> set1, Set<T> set2) {
         return set1.stream().filter(set2::contains).collect(Collectors.toSet());
     }
 
     //возвращает сортированный по идентификатору список пользователей с заданными идентификаторами
     private List<User> idsToUsers(Set<Long> ids) {
         List<User> list = new ArrayList<>();
-        ids.forEach(a -> list.add(storage.get(a).orElseThrow()));
+        ids.forEach(id -> list.add(storage.get(id).orElseThrow(() -> badUser(id))));
         list.sort(Comparator.comparingLong(User::getId));
         return list;
     }

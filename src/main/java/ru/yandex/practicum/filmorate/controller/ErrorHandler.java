@@ -5,8 +5,11 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import ru.yandex.practicum.filmorate.exception.*;
 import ru.yandex.practicum.filmorate.model.ErrorResponse;
+
+import javax.validation.ConstraintViolationException;
 
 @RestControllerAdvice(basePackages = "ru.yandex.practicum.filmorate")
 public class ErrorHandler {
@@ -22,8 +25,9 @@ public class ErrorHandler {
         return new ErrorResponse(e.getMessage(), "409");
     }
 
-    @ExceptionHandler({ValidateException.class,
-            MethodArgumentNotValidException.class, IncorrectParameterFormatException.class})
+    @ExceptionHandler({ValidateException.class, ConstraintViolationException.class,
+            MethodArgumentNotValidException.class, IncorrectParameterFormatException.class,
+            MethodArgumentTypeMismatchException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleValidate(RuntimeException e) {
         return new ErrorResponse(e.getMessage(), "400");

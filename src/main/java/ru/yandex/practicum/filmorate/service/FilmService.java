@@ -4,7 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.IncorrectParameterException;
-import ru.yandex.practicum.filmorate.exception.IncorrectParameterFormatException;
 import ru.yandex.practicum.filmorate.exception.ValidateException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.Storage;
@@ -25,9 +24,9 @@ public class FilmService extends AbstractService<Film> {
 
     //добавление лайка
     public void addLike(long filmId, long userId) {
-        validateFimId(filmId);
         validateUserId(userId);
-        if (storage.get(filmId).orElseThrow().getLikes().add(userId)) {
+        Film film = storage.get(filmId).orElseThrow(() -> badFilm(filmId));
+        if (film.addLike(userId)) {
             log.info("Пользователь " + userId + " добавил лайк фильму " + filmId);
         } else {
             log.warn("Пользователь " + userId + " уже ставил лайк фильму " + filmId);
@@ -36,11 +35,9 @@ public class FilmService extends AbstractService<Film> {
 
     //удаление лайка
     public Film deleteLike(long filmId, long userId) {
-        validateFimId(filmId);
         validateUserId(userId);
-        Film film = storage.get(filmId).orElseThrow();
-        if (film.getLikes().contains(userId)) {
-            film.getLikes().remove(userId);
+        Film film = storage.get(filmId).orElseThrow(() -> badFilm(filmId));
+        if (film.removeLike(userId)) {
             log.info("Пользователь " + userId + " удалил лайк с фильма " + filmId);
         } else {
             log.warn("Пользователь " + userId + " не ставил лайк фильму " + filmId);
@@ -50,11 +47,6 @@ public class FilmService extends AbstractService<Film> {
 
     //Получение 10 топовых фильмов
     public List<Film> getTopFilms(Long count) {
-        if (count < 1) {
-            String message = "Неверное количество фильмов: ";
-            log.error(message + count);
-            throw new IncorrectParameterFormatException(message, count.toString());
-        }
         List<Film> list = storage.getAll();
         Comparator<Film> comparator = Comparator.comparingLong(a -> a.getLikes().size());
         return list
@@ -88,21 +80,17 @@ public class FilmService extends AbstractService<Film> {
         }
     }
 
-    private void validateFimId(long id) {
-        if (storage.get(id).isEmpty()) {
-            String message = "Фильм с идентификатором %d не найден.";
-            log.error(String.format(message, id));
-            throw new IncorrectParameterException(message, id);
-        }
+    private IncorrectParameterException badFilm(long id) {
+        String message = "Фильм с идентификатором %d не найден.";
+        log.error(String.format(message, id));
+        return new IncorrectParameterException(message, id);
     }
 
-    ////////////////////////// Вспомогательная функция ///////////////////////
-
-    private void validateUserId(long userId) {
-        if (userId <= 0) {
+    private void validateUserId(long id) {
+        if (id <= 0) {
             String message = "Некорректный идентификатор пользователя: ";
-            log.error(message + userId);
-            throw new IncorrectParameterException(message, userId);
+            log.error(message + id);
+            throw new IncorrectParameterException(message, id);
         }
     }
 }
