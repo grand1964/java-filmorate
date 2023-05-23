@@ -1,82 +1,74 @@
 package ru.yandex.practicum.filmorate.controller;
 
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.exception.ObjectAlreadyExistException;
-import ru.yandex.practicum.filmorate.exception.ObjectNotExistException;
-import ru.yandex.practicum.filmorate.exception.ValidateException;
 import ru.yandex.practicum.filmorate.model.Film;
-
+import ru.yandex.practicum.filmorate.service.FilmService;
 import javax.validation.Valid;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashMap;
+import javax.validation.constraints.Positive;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/films")
-@Slf4j
+@Validated
 public class FilmController {
-    private static final LocalDate BASE_DATE = LocalDate.of(1895, 12, 28);
-    private final Map<Long, Film> films;
-    private long currentId;
+    private final FilmService service;
 
-    public FilmController() {
-        currentId = 0;
-        films = new HashMap<>();
+    @Autowired
+    public FilmController(FilmService service) {
+        this.service = service;
     }
 
-    ///////////////////////////// Обработчики REST ///////////////////////////
+    ///////////////////////////// Получение данных ///////////////////////////
 
+    //получение всех фильмов
     @GetMapping
     public List<Film> getAllFilms() {
-        return new ArrayList<>(films.values());
+        return service.getAll();
     }
+
+    //получение фильма по идентификатору
+    @GetMapping(value = "/{id}")
+    public Film getFilm(@PathVariable("id") long filmId) {
+        return service.get(filmId);
+    }
+
+    //получение топовых фильмов
+    @GetMapping(value = "/popular")
+    public List<Film> getTopFilms(@RequestParam(defaultValue = "10") @Positive long count) {
+        return service.getTopFilms(count);
+    }
+
+    ////////////////////////////// Передача данных ///////////////////////////
 
     @PostMapping
     public Film createFilm(@Valid @RequestBody Film film) {
-        validateFilm(film);
-        if (films.containsKey(film.getId())) {
-            log.error("Фильм с идентификатором " + film.getId() + " уже существует.");
-            throw new ObjectAlreadyExistException("Film", film.getId());
-        }
-        film.setId(++currentId);
-        films.put(currentId, film);
-        log.info("Добавлен новый фильм: " + film);
-        return film;
+        return service.create(film);
     }
 
     @PutMapping
     public Film updateFilm(@Valid @RequestBody Film film) {
-        validateFilm(film);
-        if (!films.containsKey(film.getId())) {
-            log.error("Фильма с идентификатором " + film.getId() + " не существует.");
-            throw new ObjectNotExistException("Film", film.getId());
-        }
-        films.put(film.getId(), film);
-        log.info("Фильм с идентификатором " + film.getId() + " заменен на " + film);
-        return film;
+        return service.update(film);
     }
 
-    /////////////////////////////// Валидаторы ///////////////////////////////
-
-    private void validateDescription(String description) {
-        if ((description != null) && (description.length() > 200)) {
-            log.error("Ошибка валидации.");
-            throw new ValidateException("Описание фильма не должно быть длиннее 200 символов.");
-        }
+    //добавление лайка фильму
+    @PutMapping(value = "/{id}/like/{userId}")
+    public void addLike(@PathVariable long id, @PathVariable @Positive long userId) {
+        service.addLike(id, userId);
     }
 
-    private void validateRelease(LocalDate release) {
-        if (release.isBefore(BASE_DATE)) {
-            log.error("Ошибка валидации.");
-            throw new ValidateException("Релиз не может быть раньше " + BASE_DATE);
-        }
+    ////////////////////////////// Удаление данных ///////////////////////////
+
+    //удаление лайка с фильма
+    @DeleteMapping(value = "/{id}/like/{userId}")
+    public Film deleteLike(@PathVariable long id, @PathVariable long userId) {
+        return service.deleteLike(id, userId);
     }
 
-    private void validateFilm(Film film) {
-        validateDescription(film.getDescription());
-        validateRelease(film.getReleaseDate());
+    //удаление всех фильмов (нужно для тестов)
+    @DeleteMapping
+    public void deleteAll() {
+        service.deleteAll();
     }
 }

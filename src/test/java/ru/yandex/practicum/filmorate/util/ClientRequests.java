@@ -1,4 +1,4 @@
-package ru.yandex.practicum.filmorate.controller;
+package ru.yandex.practicum.filmorate.util;
 
 import java.io.IOException;
 import java.net.URI;
@@ -17,6 +17,7 @@ public class ClientRequests {
                 .GET()
                 .uri(URI.create(url + path))
                 .header("Accept", "application/json")
+                .header("Content-type", "application/json")
                 .build();
         return client.send(request, HttpResponse.BodyHandlers.ofString());
     }
@@ -41,6 +42,27 @@ public class ClientRequests {
                 .uri(URI.create(url + postPath))
                 .header("Accept", "application/json")
                 .header("Content-type", "application/json")
+                .build();
+        return client.send(request, HttpResponse.BodyHandlers.ofString());
+    }
+
+    protected HttpResponse<String> responseToVoidPUT(String postPath)
+            throws IOException, InterruptedException {
+        final HttpRequest.BodyPublisher body = HttpRequest.BodyPublishers.ofString("");
+        HttpRequest request = HttpRequest.newBuilder()
+                .PUT(body)
+                .uri(URI.create(url + postPath))
+                .header("Accept", "application/json")
+                .build();
+        return client.send(request, HttpResponse.BodyHandlers.ofString());
+    }
+
+    protected HttpResponse<String> responseToDELETE(String postPath)
+            throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .DELETE()
+                .uri(URI.create(url + postPath))
+                .header("Accept", "application/json")
                 .build();
         return client.send(request, HttpResponse.BodyHandlers.ofString());
     }
