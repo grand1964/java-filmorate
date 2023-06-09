@@ -9,37 +9,31 @@ import ru.yandex.practicum.filmorate.FilmorateApplication;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.util.ClientRequests;
 import ru.yandex.practicum.filmorate.util.LocalDateAdapter;
+import ru.yandex.practicum.filmorate.util.TestUtils;
 
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
-import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class UserControllerTest extends ClientRequests {
+    private static final int USER_COUNT = 10;
     private static ConfigurableApplicationContext context;
     private static Gson gson;
-    private static int id;
-    private User user;
 
-    //сравнивает пользователя с его json-представлением без учета id
-    private boolean compareUsers(User user, String response) {
-        User responseUser = gson.fromJson(response, User.class);
-        responseUser.setId(user.getId());
-        return user.equals(responseUser);
-    }
+    ///////////////////////// Методы жизненного цикла ////////////////////////
 
     @BeforeAll
     static void init() {
         context = SpringApplication.run(FilmorateApplication.class);
         client = HttpClient.newHttpClient();
-        GsonBuilder gsonBuilder = new GsonBuilder();
-        gsonBuilder.registerTypeAdapter(LocalDate.class, new LocalDateAdapter());
-        gson = gsonBuilder.create();
-        id = 0;
+        gson = new GsonBuilder()
+                .registerTypeAdapter(LocalDate.class, new LocalDateAdapter())
+                .create();
     }
 
     @AfterAll
@@ -48,97 +42,129 @@ class UserControllerTest extends ClientRequests {
         context.close();
     }
 
-    @BeforeEach
-    void prepareUser() {
-        user = new User();
-        id++;
-        user.setId(id);
-        user.setEmail("Vasya@mmm");
-        user.setLogin("xxx");
-        user.setName("Vasya");
-        user.setBirthday(LocalDate.of(1940, 12, 9));
-        user.setFriends(new HashSet<>());
-    }
+    ///////////////////////////////// Тесты //////////////////////////////////
 
-    @AfterEach
-    void clearUser() {
-        user = null;
-    }
+    /*
+        Проверяют только коды возврата.
+        Не предназначены для тестирования данных в базе.
+     */
 
     @Test
-    void createUserEmailTest() throws IOException, InterruptedException {
-        //отсутствующий email
-        user.setEmail(null);
-        String json = gson.toJson(user);
-        HttpResponse<String> response = responseToPOST(json, "/users");
-        assertEquals(response.statusCode(), 400);
-        //пустой email
-        user.setEmail(" ");
-        json = gson.toJson(user);
-        response = responseToPOST(json, "/users");
-        assertEquals(response.statusCode(), 400);
-        //email без @
-        user.setEmail("abc");
-        json = gson.toJson(user);
-        response = responseToPOST(json, "/users");
-        assertEquals(response.statusCode(), 400);
-        //email без логина
-        user.setEmail("@nnn");
-        json = gson.toJson(user);
-        response = responseToPOST(json, "/users");
-        assertEquals(response.statusCode(), 400);
-        //email с пробелами
-        user.setEmail("aaa@n nn");
-        json = gson.toJson(user);
-        response = responseToPOST(json, "/users");
-        assertEquals(response.statusCode(), 400);
-    }
-
-    @Test
-    void createUserTestWithBadLogin() throws IOException, InterruptedException {
-        //отсутствующий логин
-        user.setLogin(null);
-        String json = gson.toJson(user);
-        HttpResponse<String> response = responseToPOST(json, "/users");
-        assertEquals(response.statusCode(), 400);
-        //пустой логин
-        user.setLogin(" ");
-        json = gson.toJson(user);
-        response = responseToPOST(json, "/users");
-        assertEquals(response.statusCode(), 400);
-        //логин с пробелами
-        user.setLogin("a b");
-        json = gson.toJson(user);
-        response = responseToPOST(json, "/users");
-        assertEquals(response.statusCode(), 400);
-    }
-
-    @Test
-    void createUserTestWithFutureBirthday() throws IOException, InterruptedException {
-        //дата рождения - в будущем
-        user.setBirthday(LocalDate.of(2050, 12, 9));
-        String json = gson.toJson(user);
-        HttpResponse<String> response = responseToPOST(json, "/users");
-        assertEquals(response.statusCode(), 400); //не годится
-    }
-
-    @Test
-    void createFilmTestWithNowOrFutureBirthday() throws IOException, InterruptedException {
-        //дата рождения - текущая (это годится)
-        user.setBirthday(LocalDate.now());
-        String json = gson.toJson(user);
-        HttpResponse<String> response = responseToPOST(json, "/users");
+    void getUserByIdTest() throws IOException, InterruptedException {
+        int number = USER_COUNT + 17;
+        //отсутствующий пользователь
+        assertEquals(responseToGET("/users/" + number).statusCode(), 404);
+        //пользователь с нечисловым номером
+        assertEquals(responseToGET("/users/" + "1a2").statusCode(), 400);
+        //существующий пользователь
+        HttpResponse<String> response = responseToGET("/users/" + 1);
         assertEquals(response.statusCode(), 200);
-        assertTrue(compareUsers(user, response.body())); //сверяем отправленное с полученным
     }
 
     @Test
-    void createFilmTestWithPastBirthday() throws IOException, InterruptedException {
-        //дата рождения - на день раньше текущей
-        user.setBirthday(user.getBirthday().minusDays(1));
-        String json = gson.toJson(user);
-        HttpResponse<String> response = responseToPOST(json, "/users");
-        assertEquals(response.statusCode(), 200); //это приемлемо
-        assertTrue(compareUsers(user, response.body())); //сверяем отправленное с полученным
+    void getAllUserTest() throws IOException, InterruptedException {
+        HttpResponse<String> response = responseToGET("/users/");
+        assertEquals(response.statusCode(), 200);
+    }
+
+    @Test
+    void addFriendToUserTest() throws IOException, InterruptedException {
+        //добавляем несуществующего друга
+        int userId = 1;
+        int friendId = USER_COUNT + 17;
+        assertEquals(setFriends(userId, friendId), 404);
+        //добавляем друга несуществующему пользователю
+        userId = USER_COUNT + 17;
+        friendId = 1;
+        assertEquals(setFriends(userId, friendId), 404);
+        //корректное добавление друга
+        userId = 1;
+        friendId = 2;
+        assertEquals(setFriends(userId, friendId), 200);
+        //повторное добавление друга
+        assertEquals(setFriends(userId, friendId), 200); //это не ошибка
+        //удаление друга (возвращаем исходное состояние)
+        removeFriends(userId, friendId);
+    }
+
+    @Test
+    void deleteFriendTest() throws IOException, InterruptedException {
+        int userId = 1;
+        int friendId = 5;
+        //вначале создаем друзей
+        setFriends(userId, friendId);
+        //а теперь удаляем
+        String request = String.format("/users/%d/friends/%d", userId, friendId);
+        HttpResponse<String> response = responseToDELETE(request);
+        assertEquals(response.statusCode(), 200);
+        //повторное удаление друга
+        assertEquals(responseToDELETE(request).statusCode(), 200); //это не ошибка
+    }
+
+    @Test
+    void friendsListTest() throws IOException, InterruptedException {
+        //вначале создаем друзей
+        int userId = 1;
+        for (int id = 2; id < 6; id++) {
+            setFriends(userId, id);
+        }
+        //затем запрашиваем их для пользователя 1
+        String request = "/users/%s/friends";
+        HttpResponse<String> response = responseToGET(String.format(request, userId));
+        assertEquals(response.statusCode(), 200);
+        //конвертируем ответ в список
+        List<User> friends = TestUtils.jsonToUserList(response.body(), gson);
+        //проверяем идентификаторы друзей
+        assertEquals(friends.size(), 4);
+        for (int id = 2; id < 6; id++) {
+            assertEquals(friends.get(id - 2).getId(), id);
+        }
+        //удаляем всех друзей
+        for (int id = 2; id < 6; id++) {
+            removeFriends(userId, id);
+        }
+    }
+
+    @Test
+    void commonFriendsTest() throws IOException, InterruptedException {
+        //создаем друзей
+        for (int id = 2; id < USER_COUNT - 1; id++) {
+            setFriends(id, id + 1);
+            setFriends(1, id);
+        }
+        long userId = 1;
+        long otherId = 5;
+        String request = String.format("/users/%d/friends/common/%d", userId, otherId);
+        HttpResponse<String> response = responseToGET(request);
+        assertEquals(response.statusCode(), 200);
+        //конвертируем ответ в список
+        List<User> friends = TestUtils.jsonToUserList(response.body(), gson);
+        //проверяем количество общих друзей
+        assertEquals(friends.size(), 1);
+        //проверяем идентификаторы друзей
+        Set<Long> commonIds = Set.of(6L);
+        for (User friend : friends) {
+            assertTrue(commonIds.contains(friend.getId()));
+        }
+        //удаляем друзей
+        for (int id = 2; id < USER_COUNT - 1; id++) {
+            removeFriends(id, id + 1);
+            removeFriends(1, id);
+        }
+    }
+
+    ///////////////////////// Вспомогательные функции ////////////////////////
+
+    //связывает пользователей в друзья
+    private int setFriends(long id1, long id2) throws IOException, InterruptedException {
+        String request = "/users/%s/friends/%s";
+        HttpResponse<String> response = responseToVoidPUT(String.format(request, id1, id2));
+        return response.statusCode();
+    }
+
+    //удаляет друзей
+    private void removeFriends(long userId, long friendId) throws IOException, InterruptedException {
+        String request = String.format("/users/%d/friends/%d", userId, friendId);
+        responseToDELETE(request);
     }
 }

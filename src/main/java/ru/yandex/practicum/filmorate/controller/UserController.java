@@ -52,7 +52,7 @@ public class UserController {
     }
 
     @PutMapping
-    public User updateUser(@ Valid @RequestBody User user) {
+    public User updateUser(@Valid @RequestBody User user) {
         return service.update(user);
     }
 
@@ -66,13 +66,7 @@ public class UserController {
 
     //удаление из друзей пользователя с заданным идентификатором
     @DeleteMapping(value = "/{id}/friends/{friendId}")
-    public User deleteFriend(@PathVariable long id, @PathVariable long friendId) {
-        return service.deleteFriend(id, friendId);
-    }
-
-    //удаление всех пользователей (нужно для тестов)
-    @DeleteMapping
-    public void deleteAll() {
-        service.deleteAll();
+    public void deleteFriend(@PathVariable long id, @PathVariable long friendId) {
+        service.deleteFriend(id, friendId);
     }
 }

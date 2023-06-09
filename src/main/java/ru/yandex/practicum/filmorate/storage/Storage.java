@@ -8,11 +8,11 @@ public interface Storage<T extends Storable> {
 
     List<T> getAll();
 
-    Optional<T> create(T object);
+    void create(T object);
 
-    Optional<T> update(T object);
+    boolean update(T object);
 
-    Optional<T> delete(long id);
+    boolean delete(long id);
 
-    void deleteAll();
+    int deleteAll();
 }
