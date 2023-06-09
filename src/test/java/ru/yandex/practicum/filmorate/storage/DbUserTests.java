@@ -66,7 +66,7 @@ public class DbUserTests {
     public void getAllUsersTest() {
         List<User> users = service.getAll();
         assertEquals(users.size(), USER_COUNT);
-        for (int i = 0; i < USER_COUNT ; i++) {
+        for (int i = 0; i < USER_COUNT; i++) {
             assertEquals(users.get(i).getId(), i + 1);
         }
     }
