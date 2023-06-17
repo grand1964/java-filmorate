@@ -12,6 +12,9 @@ import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.GenreStorage;
+import ru.yandex.practicum.filmorate.storage.LikeStorage;
+import ru.yandex.practicum.filmorate.storage.MpaStorage;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -21,11 +24,19 @@ import java.util.stream.Collectors;
 @Service
 public class FilmService {
     private static final LocalDate BASE_DATE = LocalDate.of(1895, 12, 28);
-    private final FilmStorage storage;
+    private final FilmStorage filmStorage;
+    private final GenreStorage genreStorage;
+    private final MpaStorage mpaStorage;
+
+    private final LikeStorage likeStorage;
 
     @Autowired
-    public FilmService(FilmStorage storage) {
-        this.storage = storage;
+    public FilmService(FilmStorage filmStorage, GenreStorage genreStorage,
+                       MpaStorage mpaStorage, LikeStorage likeStorage) {
+        this.filmStorage = filmStorage;
+        this.genreStorage = genreStorage;
+        this.mpaStorage = mpaStorage;
+        this.likeStorage = likeStorage;
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -36,27 +47,17 @@ public class FilmService {
 
     //получение фильма по идентификатору
     public Film get(long id) {
-        //создаем фильм и читаем его данные из базы
-        Film film = storage.get(id).orElseThrow(() -> { //фильма нет, ошибка
+        //создаем фильм и читаем все его данные из базы
+        return filmStorage.get(id).orElseThrow(() -> { //фильма нет, ошибка
             log.error("Задан ошибочный идентификатор: " + id);
             return new IncorrectParameterException("Задан ошибочный идентификатор: ", id);
         });
-        //загружаем жанр, рейтинг и лайки
-        loadFilmLinks(film);
-        //возвращаем фильм
-        return film;
     }
 
-    //получение списка всех фильмов
+    //получение всех фильмов
     public List<Film> getAll() {
-        //читаем все фильмы (без связей)
-        List<Film> films = storage.getAll();
-        //загружаем их жанры, рейтинги и лайки
-        for (Film film : films) {
-            loadFilmLinks(film);
-        }
-        //возвращаем список
-        return films;
+        //читаем все фильмы со связями
+        return filmStorage.getAll();
     }
 
     ////////////////////////////// Запись фильмов ////////////////////////////
@@ -67,12 +68,13 @@ public class FilmService {
         validate(film);
         //фильм с существующим идентификатором не допускается
         long id = film.getId();
-        if (storage.get(id).isPresent()) {
+        //if (filmStorage.get(id).isPresent()) {
+        if (filmStorage.contains(id)) {
             log.error("Фильм с идентификатором " + id + " уже существует.");
             throw new ObjectAlreadyExistException(id);
         }
         //создаем в базе фильм с правильным id
-        storage.create(film);
+        filmStorage.create(film);
         //сохраняем в базе жанр, рейтинг и лайки
         storeFilmLinks(film);
         //возвращаем фильм
@@ -86,7 +88,7 @@ public class FilmService {
         //обновляем данные фильма
         long id = film.getId();
         //обновляем вначале все поля из таблицы film
-        if (!storage.update(film)) { //ошибка, фильма нет
+        if (!filmStorage.update(film)) { //ошибка, фильма нет
             log.error("фильма с идентификатором " + id + " не существует.");
             throw new ObjectNotExistException(id);
         }
@@ -100,7 +102,7 @@ public class FilmService {
 
     //удаление по идентификатору
     public boolean delete(long id) {
-        boolean result = storage.delete(id);
+        boolean result = filmStorage.delete(id);
         if (!result) {
             log.warn("Фильм " + id + " не найден или уже удален.");
         }
@@ -108,7 +110,7 @@ public class FilmService {
     }
 
     public int deleteAll() {
-        int count = storage.deleteAll();
+        int count = filmStorage.deleteAll();
         log.info("Удалено " + count + " фильмов.");
         return count;
     }
@@ -124,11 +126,11 @@ public class FilmService {
         //проверяем корректность идентификатора пользователя
         validateUserId(userId);
         //проверяем существование фильма
-        if (storage.get(filmId).isEmpty()) { //его нет
+        if (!filmStorage.contains(filmId)) { //его нет
             badFilm(filmId); //ошибка
         }
         //добавляем лайк
-        if (storage.addLike(filmId, userId)) { //лайк добавлен
+        if (likeStorage.addLike(filmId, userId)) { //лайк добавлен
             log.info("Пользователь " + userId + " добавил лайк фильму " + filmId);
         } else { //добавить не удалось
             log.warn("Пользователь " + userId + " уже ставил лайк фильму " + filmId);
@@ -137,17 +139,17 @@ public class FilmService {
 
     //получение списка лайков
     public List<User> getLikes(long filmId) {
-        if (storage.get(filmId).isEmpty()) {
+        if (filmStorage.get(filmId).isEmpty()) {
             badFilm(filmId);
         }
         log.info("Получен список лайков фильма " + filmId);
-        return storage.getLikes(filmId);
+        return likeStorage.getLikes(filmId);
     }
 
     //удаление лайка
     public boolean deleteLike(long filmId, long userId) {
         validateUserId(userId);
-        boolean result = storage.deleteLike(filmId, userId);
+        boolean result = likeStorage.deleteLike(filmId, userId);
         if (result) {
             log.info("Пользователь " + userId + " удалил лайк с фильма " + filmId);
         } else {
@@ -158,7 +160,7 @@ public class FilmService {
 
     //Получение 10 топовых фильмов
     public List<Film> getTopFilms(Long count) {
-        List<Film> films = storage.getTopFilms(count);
+        List<Film> films = likeStorage.getTopFilms(count);
         for (Film film : films) {
             loadFilmLinks(film);
         }
@@ -169,7 +171,7 @@ public class FilmService {
 
     //выдает жанр по идентификатору
     public Genre getGenre(long genreId) {
-        return storage.getGenre(genreId).orElseThrow(() -> {
+        return genreStorage.getGenre(genreId).orElseThrow(() -> {
             String message = "Жанр с идентификатором %d не найден.";
             log.error(String.format(message, genreId));
             return new IncorrectParameterException(message, genreId);
@@ -178,14 +180,14 @@ public class FilmService {
 
     //выдает все доступные жанры
     public List<Genre> getAllGenres() {
-        return storage.getAllGenres();
+        return genreStorage.getAllGenres();
     }
 
     /////////////////////////// Поддержка рейтингов //////////////////////////
 
     //выдает рейтинг по идентификатору
     public Mpa getMpa(long mpaId) {
-        return storage.getMpa(mpaId).orElseThrow(() -> {
+        return mpaStorage.getMpa(mpaId).orElseThrow(() -> {
             String message = "Рейтинг с идентификатором %d не найден.";
             log.error(String.format(message, mpaId));
             return new IncorrectParameterException(message, mpaId);
@@ -194,7 +196,7 @@ public class FilmService {
 
     //выдает все доступные рейтинги
     public List<Mpa> getAllMpa() {
-        return storage.getAllMpa();
+        return mpaStorage.getAllMpa();
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -204,11 +206,11 @@ public class FilmService {
     //загружает связи фильма из других таблиц
     private void loadFilmLinks(Film film) {
         //загрузка жанров
-        film.setGenres(storage.getFilmGenres(film.getId()));
+        film.setGenres(genreStorage.getFilmGenres(film.getId()));
         //загрузка рейтингов
-        storage.getMpa(film.getMpa().getId()).ifPresent(film::setMpa);
+        mpaStorage.getMpa(film.getMpa().getId()).ifPresent(film::setMpa);
         //загрузка лайков
-        film.setLikes(storage.getLikeIds(film.getId()));
+        film.setLikes(likeStorage.getLikeIds(film.getId()));
     }
 
     //обновляет связи фильма в других таблицах
@@ -225,13 +227,11 @@ public class FilmService {
     private void storeFilmGenres(Film film) {
         //читаем текущие жанры (их различие обеспечивается на этапе валидации)
         List<Genre> genres = film.getGenres();
-        storage.deleteFilmGenres(film.getId()); //удаляем их
+        genreStorage.deleteFilmGenres(film.getId()); //удаляем их
         if (genres == null) { //жанры не инициализированы
             film.setGenres(new ArrayList<>()); //создаем пустой массив
         } else { //жанры есть
-            for (Genre genre : genres) { //пишем в базу их связи с фильмом
-                storage.addFilmGenre(film.getId(), genre.getId());
-            }
+            genreStorage.setFilmGenres(film.getId(), genres);
         }
     }
 
@@ -243,7 +243,7 @@ public class FilmService {
             return; //обработка не требуется
         }
         //читаем из базы полный рейтинг (если его нет - ошибка)
-        Mpa mpaStored = storage.getMpa(mpa.getId()).orElseThrow(() -> {
+        Mpa mpaStored = mpaStorage.getMpa(mpa.getId()).orElseThrow(() -> {
             String message = "У фильма %d некорректный рейтинг.";
             log.error(String.format(message, film.getId()));
             return new IncorrectParameterException(message, film.getId());
@@ -262,11 +262,9 @@ public class FilmService {
             film.setLikes(likes); //устанавливаем его
         }
         //удаляем все лайки, связанные с фильмом
-        storage.deleteAllLikes(filmId);
+        likeStorage.deleteAllLikes(filmId);
         //устанавливаем новые
-        for (Long id : likes) {
-            storage.addLike(filmId, id); //добавляем лайк фильму
-        }
+        likeStorage.storeAllLikes(filmId, likes);
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -316,7 +314,7 @@ public class FilmService {
         //проверяем корректность каждого из жанров
         for (Genre genre : genres) {
             //если жанр не задан или отсутствует в базе - ошибка
-            if ((genre == null) || storage.getGenre(genre.getId()).isEmpty()) {
+            if ((genre == null) || genreStorage.getGenre(genre.getId()).isEmpty()) {
                 String message = "У фильма %d обнаружен некорректный жанр.";
                 log.error(String.format(message, film.getId()));
                 throw new IncorrectParameterException(message, film.getId());

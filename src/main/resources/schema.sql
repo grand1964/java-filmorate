@@ -28,16 +28,17 @@ CREATE TABLE IF NOT EXISTS likes(
     PRIMARY KEY (film_id, user_id),
     FOREIGN KEY (film_id) REFERENCES films (id) ON DELETE CASCADE ON UPDATE CASCADE
 );
-CREATE TABLE IF NOT EXISTS film_genres(
-    film_id INTEGER,
-    genre_id INTEGER,
-    PRIMARY KEY (film_id, genre_id),
-    FOREIGN KEY (film_id) REFERENCES films (id) ON DELETE CASCADE ON UPDATE CASCADE
-);
 CREATE TABLE IF NOT EXISTS genres(
     id INTEGER,
     name varchar(40),
     PRIMARY KEY (id)
+);
+CREATE TABLE IF NOT EXISTS film_genres(
+    film_id INTEGER,
+    genre_id INTEGER,
+    PRIMARY KEY (film_id, genre_id),
+    FOREIGN KEY (film_id) REFERENCES films (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (genre_id) REFERENCES genres (id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 CREATE TABLE IF NOT EXISTS mpa(
     id INTEGER,

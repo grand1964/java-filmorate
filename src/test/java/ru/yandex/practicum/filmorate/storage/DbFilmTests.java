@@ -11,6 +11,7 @@ import ru.yandex.practicum.filmorate.exception.IncorrectParameterException;
 import ru.yandex.practicum.filmorate.exception.ObjectAlreadyExistException;
 import ru.yandex.practicum.filmorate.exception.ObjectNotExistException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.FilmService;
 import ru.yandex.practicum.filmorate.util.TestUtils;
@@ -61,11 +62,16 @@ public class DbFilmTests {
 
     @Test
     public void getAllFilmsTest() {
+        service.addLike(1, 2);
+        service.addLike(2, 3);
+        service.addLike(2, 4);
         List<Film> films = service.getAll();
         assertEquals(films.size(), FILM_COUNT);
         for (int i = 0; i < FILM_COUNT; i++) {
             assertEquals(films.get(i).getId(), i + 1);
         }
+        assertEquals(films.get(0).getLikes().size(), 1);
+        assertEquals(films.get(1).getLikes().size(), 2);
     }
 
     @Test
@@ -85,6 +91,9 @@ public class DbFilmTests {
         likes.add(3L);
         likes.add(4L);
         film.setLikes(likes);
+        //добавляем жанр
+        Genre genre = Genre.builder().id(1).name("Комедия").build();
+        film.addGenre(genre);
         //помещаем фильм в базу
         service.create(film);
         //тесты films

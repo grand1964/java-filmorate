@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.util;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.io.IOException;
@@ -90,6 +91,10 @@ public class TestUtils {
                 .description("Description" + number)
                 .releaseDate(LocalDate.of(1940, 12, 9))
                 .duration(17)
+                .mpa(Mpa.builder()
+                        .id(1)
+                        .name("G")
+                        .build())
                 .build();
         film.setLikes(new HashSet<>());
         return film;
@@ -149,12 +154,12 @@ public class TestUtils {
             stringBuilder.append(
                     "INSERT INTO films (name, description, release_date, duration, mpa_id) ");
             stringBuilder.append(String.format(
-                    "VALUES ('name%d', 'description%d', '1940-12-09', 17, %d);", i, i, i % 5 + 1));
+                    "VALUES ('name%d', 'description%d', '1940-12-09', 17, %d);", i, i, (i - 1) % 5 + 1));
             //вставляем в film_genres жанр для него
             stringBuilder.append(
                     "INSERT INTO film_genres (film_id, genre_id) ");
             stringBuilder.append(String.format(
-                    "VALUES (%d, %d);", i, i % 6 + 1));
+                    "VALUES (%d, %d);", i, (i - 1) % 6 + 1));
         }
         return stringBuilder.toString();
     }
