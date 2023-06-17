@@ -51,6 +51,7 @@ public class DbGenreStorage implements GenreStorage {
                         Genre genre = genres.get(i);
                         ps.setLong(2, genre.getId());
                     }
+
                     public int getBatchSize() {
                         return genres.size();
                     }
