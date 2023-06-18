@@ -76,10 +76,6 @@ public class UserService {
             log.error("Пользователя с идентификатором " + id + " не существует.");
             throw new ObjectNotExistException(id);
         }
-        //если удалось - обновляем подписки пользователя
-        friendStorage.deleteAllFriends(id); //удаляем из базы всех друзей пользователя
-        friendStorage.deleteAllSubscribes(id); //удаляем в базе пользователя из всех подписок
-        friendStorage.addFriendsOfUser(user); //заполняем связи в базе данными пользователя
         //возвращаем пользователя
         return user;
     }

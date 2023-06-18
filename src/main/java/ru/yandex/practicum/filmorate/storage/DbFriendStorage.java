@@ -152,18 +152,4 @@ public class DbFriendStorage extends DbBaseUserStorage implements FriendStorage 
         String sqlQuery = "delete from friends where user_id = :user_id and friend_id = :friend_id";
         return jdbcTemplate.update(sqlQuery, mapIds(userId, friendId)) > 0;
     }
-
-    //удаление всех подписчиков
-    @Override
-    public void deleteAllFriends(long userId) {
-        String sqlQuery = "delete from friends where user_id = ?";
-        jdbcTemplate.getJdbcTemplate().update(sqlQuery, userId);
-    }
-
-    //удаление пользователя из всех подписок
-    @Override
-    public void deleteAllSubscribes(long userId) {
-        String sqlQuery = "delete from friends where friend_id = ?";
-        jdbcTemplate.getJdbcTemplate().update(sqlQuery, userId);
-    }
 }

@@ -144,15 +144,6 @@ public class DbUserTests {
         //тесты users
         List<User> users = service.getAll();
         assertEquals(users.size(), USER_COUNT); //число людей в базе не меняется
-        //тесты friends (друзья должны измениться)
-        List<User> allFriends = service.getFriends(userId); //все друзья
-        assertEquals(allFriends.size(), 3); //их трое
-        for (int i = 0; i < 3; i++) { //проверяем их id
-            assertEquals(allFriends.get(i).getId(), i + 2);
-        }
-        List<User> acknowledgedFriends = service.getAcknowledgedFriends(userId); //подтвержденные друзья
-        assertEquals(acknowledgedFriends.size(), 1); //такой лишь один
-        assertEquals(acknowledgedFriends.get(0).getId(), 4);
     }
 
     @Test

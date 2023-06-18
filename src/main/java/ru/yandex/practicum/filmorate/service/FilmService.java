@@ -160,11 +160,7 @@ public class FilmService {
 
     //Получение 10 топовых фильмов
     public List<Film> getTopFilms(Long count) {
-        List<Film> films = likeStorage.getTopFilms(count);
-        for (Film film : films) {
-            loadFilmLinks(film);
-        }
-        return films;
+        return likeStorage.getTopFilms(count);
     }
 
     //////////////////////////// Поддержка жанров ////////////////////////////
@@ -202,16 +198,6 @@ public class FilmService {
     //////////////////////////////////////////////////////////////////////////
     /////////////////////////// Оперирование связями /////////////////////////
     //////////////////////////////////////////////////////////////////////////
-
-    //загружает связи фильма из других таблиц
-    private void loadFilmLinks(Film film) {
-        //загрузка жанров
-        film.setGenres(genreStorage.getFilmGenres(film.getId()));
-        //загрузка рейтингов
-        mpaStorage.getMpa(film.getMpa().getId()).ifPresent(film::setMpa);
-        //загрузка лайков
-        film.setLikes(likeStorage.getLikeIds(film.getId()));
-    }
 
     //обновляет связи фильма в других таблицах
     private void storeFilmLinks(Film film) {
