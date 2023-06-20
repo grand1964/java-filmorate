@@ -42,6 +42,13 @@ public class DbGenreStorage implements GenreStorage {
         return jdbcTemplate.getJdbcTemplate().query(sqlQuery, Genre::mapRowToGenre);
     }
 
+    //возвращает полный список идентификаторов жанров из базы
+    @Override
+    public List<Long> getAllGenreIds() {
+        String sqlQuery = "select id from genres order by id asc";
+        return jdbcTemplate.getJdbcTemplate().query(sqlQuery, (r, n) -> r.getLong("id"));
+    }
+
     public void setFilmGenres(Long filmId, List<Genre> genres) {
         jdbcTemplate.getJdbcTemplate().batchUpdate(
                 "merge into film_genres (film_id, genre_id) values (?, ?) ",
@@ -64,7 +71,7 @@ public class DbGenreStorage implements GenreStorage {
         String sqlQuery = "select g.id, g.name from film_genres as f " +
                 "inner join genres as g on f.genre_id = g.id " +
                 "where f.film_id = ? " +
-                "order by f.film_id asc";
+                "order by g.id asc";
         return jdbcTemplate.getJdbcTemplate().query(sqlQuery, Genre::mapRowToGenre, filmId);
     }
 

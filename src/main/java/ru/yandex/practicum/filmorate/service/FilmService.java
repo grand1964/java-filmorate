@@ -68,7 +68,6 @@ public class FilmService {
         validate(film);
         //фильм с существующим идентификатором не допускается
         long id = film.getId();
-        //if (filmStorage.get(id).isPresent()) {
         if (filmStorage.contains(id)) {
             log.error("Фильм с идентификатором " + id + " уже существует.");
             throw new ObjectAlreadyExistException(id);
@@ -123,8 +122,6 @@ public class FilmService {
 
     //добавление лайка
     public void addLike(long filmId, long userId) {
-        //проверяем корректность идентификатора пользователя
-        validateUserId(userId);
         //проверяем существование фильма
         if (!filmStorage.contains(filmId)) { //его нет
             badFilm(filmId); //ошибка
@@ -148,7 +145,11 @@ public class FilmService {
 
     //удаление лайка
     public boolean deleteLike(long filmId, long userId) {
-        validateUserId(userId);
+        if (userId <= 0) { //такого идентификатора быть не может
+            String message = "Некорректный идентификатор пользователя: ";
+            log.error(message + userId);
+            throw new IncorrectParameterException(message, userId);
+        }
         boolean result = likeStorage.deleteLike(filmId, userId);
         if (result) {
             log.info("Пользователь " + userId + " удалил лайк с фильма " + filmId);
@@ -263,7 +264,6 @@ public class FilmService {
         validateRelease(film.getReleaseDate());
         validateGenres(film);
         validateMpa(film);
-        validateLikes(film);
     }
 
     //валидация описания
@@ -297,10 +297,10 @@ public class FilmService {
                 .distinct()
                 .sorted(Comparator.comparing(Genre::getId))
                 .collect(Collectors.toList()));
-        //проверяем корректность каждого из жанров
-        for (Genre genre : genres) {
-            //если жанр не задан или отсутствует в базе - ошибка
-            if ((genre == null) || genreStorage.getGenre(genre.getId()).isEmpty()) {
+        //проверяем корректность жанров
+        List<Long> storedGenreIds = genreStorage.getAllGenreIds(); //читаем идентификаторы всех жанров из базы
+        for (Genre genre : genres) { //жанры фильма должны быть среди них
+            if ((genre == null) || !storedGenreIds.contains(genre.getId())) { //найден недопустимый жанр
                 String message = "У фильма %d обнаружен некорректный жанр.";
                 log.error(String.format(message, film.getId()));
                 throw new IncorrectParameterException(message, film.getId());
@@ -318,30 +318,10 @@ public class FilmService {
         }
     }
 
-    //валидация набора лайков
-    private void validateLikes(Film film) {
-        //проверяем корректность лайков
-        if (film.getLikes() == null) { //лайков нет
-            return; //это нормально
-        }
-        for (Long likeId : film.getLikes()) {
-            validateUserId(likeId); //проверяем корректность идентификаторов пользователя
-        }
-    }
-
     //диагностика ошибочного идентификатора
     private void badFilm(long id) {
         String message = "Фильм с идентификатором %d не найден.";
         log.error(String.format(message, id));
         throw new IncorrectParameterException(message, id);
-    }
-
-    //валидация идентификатора пользователя
-    private void validateUserId(long id) {
-        if (id <= 0) { //такого идентификатора быть не может
-            String message = "Некорректный идентификатор пользователя: ";
-            log.error(message + id);
-            throw new IncorrectParameterException(message, id);
-        }
     }
 }
