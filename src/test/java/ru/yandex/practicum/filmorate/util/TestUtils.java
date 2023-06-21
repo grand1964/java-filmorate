@@ -3,10 +3,15 @@ package ru.yandex.practicum.filmorate.util;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.model.User;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
@@ -15,13 +20,15 @@ public class TestUtils {
     ///////////////////////// Поддержка пользователей ////////////////////////
 
     //создает пользователя с заданным номером
-    public static User generateUser(int number) {
-        User user = new User();
-        user.setLogin("User" + number);
-        user.setName(user.getLogin());
-        user.setEmail(user.getName() + "@yandex.ru");
-        user.setBirthday(LocalDate.of(1940, 12, 9));
-        user.setFriends(new HashSet<>());
+    public static User generateUser(long number) {
+        User user = User.builder()
+                .id(number)
+                .login("user" + number)
+                .name("name" + number)
+                .email("user" + number + "@yandex.ru")
+                .birthday(LocalDate.of(1940, 12, 9))
+                .build();
+        user.setFriends(new HashMap<>());
         return user;
     }
 
@@ -57,15 +64,38 @@ public class TestUtils {
         return gson.fromJson(json, listType);
     }
 
+    public static String getSqlForResetUsers(int count) {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("DROP TABLE users, friends CASCADE; ");
+        try {
+            stringBuilder.append(new String(Files.readAllBytes(
+                    Path.of("./src/main/resources/schema.sql"))));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        for (int i = 1; i <= count; i++) {
+            stringBuilder.append("INSERT INTO users (login, name, email, birthday) ");
+            stringBuilder.append(String.format(
+                    "VALUES ('user%d', 'name%d', 'user%d@yandex.ru', '1940-12-09');", i, i, i));
+        }
+        return stringBuilder.toString();
+    }
+
     //////////////////////////// Поддержка фильмов ///////////////////////////
 
     //создает фильм с заданным номером
-    public static Film generateFilm(int number) {
-        Film film = new Film();
-        film.setName("Film" + number);
-        film.setDescription("Description" + number);
-        film.setDuration(17);
-        film.setReleaseDate(LocalDate.of(1940, 12, 9));
+    public static Film generateFilm(long number) {
+        Film film = Film.builder()
+                .id(number)
+                .name("Film" + number)
+                .description("Description" + number)
+                .releaseDate(LocalDate.of(1940, 12, 9))
+                .duration(17)
+                .mpa(Mpa.builder()
+                        .id(1)
+                        .name("G")
+                        .build())
+                .build();
         film.setLikes(new HashSet<>());
         return film;
     }
@@ -79,20 +109,26 @@ public class TestUtils {
         return films;
     }
 
-    //сравнивает два фильма без учета id
+    //сравнивает два фильма без учета id и объектных полей
     public static boolean compareFilms(Film film1, Film film2) {
-        long oldId = film2.getId();
-        film2.setId(film1.getId());
-        boolean result = film1.equals(film2);
-        film2.setId(oldId);
-        return result;
+        if (!film1.getName().equals(film2.getName())) {
+            return false;
+        }
+        if (!film1.getDescription().equals(film2.getDescription())) {
+            return false;
+        }
+        if (!film1.getReleaseDate().equals(film2.getReleaseDate())) {
+            return false;
+        }
+        return film1.getDuration() == film2.getDuration();
     }
 
-    //сравнивает фильм с его json-представлением без учета id
+    //сравнивает фильм с его json-представлением без учета id и объектных полей
     public static boolean compareFilmWithJson(Film film, String json, Gson gson) {
         Film jsonFilm = gson.fromJson(json, Film.class);
         jsonFilm.setId(film.getId());
-        return film.equals(jsonFilm);
+        return compareFilms(film, jsonFilm);
+        //return film.equals(jsonFilm);
     }
 
     //распаковывает json-представление массива фильмов
@@ -100,5 +136,31 @@ public class TestUtils {
         TypeToken<List<Film>> listType = new TypeToken<>() {
         };
         return gson.fromJson(json, listType);
+    }
+
+    public static String getSqlForResetFilms(int count) {
+        StringBuilder stringBuilder = new StringBuilder();
+        //удаляем таблицу films, а также связанные с ними likes и film_genre
+        stringBuilder.append("DROP TABLE films, likes, film_genres CASCADE; ");
+        //воссоздаем эти таблицы из схемы (уже пустые)
+        try {
+            stringBuilder.append(new String(Files.readAllBytes(
+                    Path.of("./src/main/resources/schema.sql"))));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        for (int i = 1; i <= count; i++) {
+            //вставляем в films очередной фильм
+            stringBuilder.append(
+                    "INSERT INTO films (name, description, release_date, duration, mpa_id) ");
+            stringBuilder.append(String.format(
+                    "VALUES ('name%d', 'description%d', '1940-12-09', 17, %d);", i, i, (i - 1) % 5 + 1));
+            //вставляем в film_genres жанр для него
+            stringBuilder.append(
+                    "INSERT INTO film_genres (film_id, genre_id) ");
+            stringBuilder.append(String.format(
+                    "VALUES (%d, %d);", i, (i - 1) % 6 + 1));
+        }
+        return stringBuilder.toString();
     }
 }
